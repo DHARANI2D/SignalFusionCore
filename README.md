@@ -2,11 +2,23 @@
 
 **High-Fidelity Threat Signal Correlation and Alert Triage Engine**
 
+![SOC Dashboard](docs/assets/dashboard.png)
+
 A comprehensive Security Operations Center (SOC) platform for threat detection, MITRE ATT&CK mapping, and security analyst training.
 
 ---
 
 ## 🎯 Key Features
+
+<div align="center">
+  <img src="docs/assets/alerts.png" width="45%" alt="Alert Feed" />
+  <img src="docs/assets/attack_graph.png" width="45%" alt="Attack Graph" />
+  <img src="docs/assets/analytics.png" width="45%" alt="Analytics Dashboard" />
+  <img src="docs/assets/ingestion.png" width="45%" alt="Log Ingestion" />
+  <img src="docs/assets/attack_chain.png" width="45%" alt="Attack Chains" />
+  <img src="docs/assets/threat_intel.png" width="45%" alt="Threat Intelligence" />
+  <img src="docs/assets/playbooks.png" width="45%" alt="Response Playbooks" />
+</div>
 
 - **48 Diverse Attack Scenarios** across all 13 MITRE ATT&CK tactics.
 - **4 Advanced Detectors**: Geo-Velocity, FSM Chain, Anomalous Action, and Threat Intel.
