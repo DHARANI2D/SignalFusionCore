@@ -36,8 +36,8 @@ A comprehensive Security Operations Center (SOC) platform for threat detection, 
 
 ```bash
 # Clone repository
-git clone <repository-url>
-cd "SignalFusion Core"
+git clone https://github.com/DHARANI2D/SignalFusionCore.git
+cd SignalFusionCore
 
 # Start with Docker Compose
 docker-compose up --build
@@ -46,6 +46,12 @@ docker-compose up --build
 **Access**:
 - Frontend UI: [http://localhost:3000](http://localhost:3000)
 - Backend API: [http://localhost:8001](http://localhost:8001)
+
+### 🚀 automated Demo Hosting (One-Click)
+For a fully automated deployment including health checks and cleanup:
+```bash
+./host-demo.sh
+```
 
 ### Manual Setup
 For manual development setup, please refer to the **[Installation Guide](docs/RUNNING.md)**.
