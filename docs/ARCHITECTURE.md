@@ -1,70 +1,72 @@
-# SignalFusion Core: The Future of Unified Security Operations
+# SignalFusion Core: Architecture & Technical Guide
 
-## ⚓ 1. The Vision & Core Idea
-**SignalFusion Core** is a next-generation "Security Fusion" platform. Unlike traditional tools that merely collect logs, SignalFusion **synthesizes** security signals into a living, breathing map of your infrastructure's health. 
+## ⚓ Vision & Core Idea
+**SignalFusion Core** is a next-generation "Security Fusion" platform. Unlike traditional tools that merely collect logs, SignalFusion **synthesizes** security signals into a living, breathing map of your infrastructure's health.
 
 The core idea is simple but powerful: **Context is King.** Instead of looking at 1,000 isolated alerts, SignalFusion fuses them into meaningful **Attack Graphs** and **Chains**, allowing security analysts to see the *story* of an attack, not just the chapters.
 
 ---
 
-## 🌪 2. The Problem: Why SignalFusion is Wanted
+## 🛠️ Technology Stack
 
-In modern cybersecurity, SOC (Security Operations Center) teams face three critical failures:
-1.  **Alert Fatigue**: Analysts are overwhelmed by thousands of low-fidelity alerts, leading to "noise blindness."
-2.  **Context Fragmentation**: Data about a user, their host, their IP, and their process is stored in different silos. Connecting them manually takes hours.
-3.  **The "Response Gap"**: Detection is fast, but response is slow. Manual remediation (blocking IPs, isolating hosts) often happens *after* data exfiltration has occurred.
+### Backend (Security Engine)
+- **Node.js & Express.js**: High-performance REST API for ingestion and triage.
+- **TypeScript**: Ensuring type safety across complex security data models.
+- **Prisma ORM**: Type-safe database access and schema management.
+- **SQLite**: Lightweight, portable local database for event and alert storage.
 
-**SignalFusion exists to bridge these gaps.**
-
----
-
-## 🛡 3. Existing Solutions vs. SignalFusion
-
-| Feature | Legacy SIEM (Splunk, QRadar) | Basic SOAR (Demisto, Phantom) | **SignalFusion Core** |
-| :--- | :--- | :--- | :--- |
-| **Correlation** | Mostly rule-based indexing. | Focuses on workflow tickets. | **Relational Graph Learning**: Fuses entities automatically. |
-| **Response** | Manual or basic scripts. | Complex, expensive playbooks. | **Interactive simulation & Retroactive response**. |
-| **UX/UI** | Data-heavy tables, "wall of text." | Task-centric dashboards. | **High-Fidelity Visual SOC**: Premium glassmorphism design. |
-| **Startup Time** | Months of "onboarding." | Weeks of integration. | **Plug-and-play simulation engine**. |
-
-### How We Are Better:
-- **Visual-First Strategy**: We don't just tell you there's a problem; we *show* you the path the attacker took through your network.
-- **Safety-First Automation**: Our built-in **Simulator** allows you to test defensive playbooks against real historical data without the risk of breaking production services.
-- **Extreme Performance**: Optimized backend services handle tens of thousands of graph nodes while maintaining a fluid, interactive frontend experience.
+### Frontend (Analyst Dashboard)
+- **Next.js (v16+)**: React framework providing efficient Server Components and dynamic routing.
+- **Tailwind CSS v4**: Cutting-edge styling engine using the new `@theme` architecture.
+- **Lucide React**: Clean, consistent security iconography.
+- **Cytoscape.js**: Optimized graph library for attack path visualization.
 
 ---
 
-## 🧠 4. What It Does: Core Capabilities
+## 🏗️ Technical Architecture
 
-### A. The Attack Graph (The "Brain")
-Translates machine telemetry into human-readable narratives. It automatically identifies "Pivoting" behavior where an attacker moves from one host to another via stolen credentials.
+### 1. Ingestion Pipeline
+Logs are posted to `/api/ingest`. The **Ingestion Service** normalizes these into `UnifiedEvent` types, mapping fields like `sourceIp`, `user`, and `eventType` into a standard schema.
 
-### B. Response Playbooks (The "Guardian")
-Automated defensive workflows. If a "High" severity Ransomware technique is detected, SignalFusion can instantly isolate the host, notify the security team on Slack, and block the malicious IP—all in under 1 second.
+### 2. Detection Engine
+The engine runs multiple detectors against the unified stream:
+- **Geo-Velocity**: Detects "Impossible Travel" by calculating distance/time between logins.
+- **FSM Chain**: A Finite State Machine that tracks multi-step attack patterns.
+- **Anomalous Action**: Identifies suspicious tool execution following reconnaissance.
 
-### C. Threat Intelligence (The "Detective")
-The system extract Indicators of Compromise (IOCs) like file hashes and malicious domains in real-time, matching them against globally crowdsourced threat feeds.
-
-### D. Multi-Dimensional Analytics (The "Manager")
-Calculates **MTTD (Mean Time to Detect)** and **MTTR (Mean Time to Respond)**, giving SOC managers a clear view of their team's efficiency and identifying areas for improvement.
-
----
-
-## 🛠 5. Implementation & Technical Logic
-
-### The Graph Engine (backend/src/services/attackGraph.ts)
-- **Logic**: Uses relational mapping (Source -> Entity -> Target). It groups alerts not just by time, but by shared environmental footprint.
-- **Efficiency**: Implements a sampling and sampling strategy to ensure even datasets with 100,000+ points remain performant.
-
-### The Playbook Engine (backend/src/services/playbookEngine.ts)
-- **Logic**: A JSON-driven state machine. It evaluates incoming signals against "Active Triggers."
-- **Simulation Mode**: Uses a virtual environment to pass historical "Alert Context" into the trigger logic, allowing users to "back-test" their defenses.
-
-### The UI Design System (frontend/src/app)
-- **Glassmorphism**: Built using TailwindCSS with high-refraction effects. This isn't just for looks—the visual hierarchy uses color and transparency to highlight the most critical threats first.
-- **Cytoscape Integration**: Custom-tuned force-directed layout that organizes nodes by their "Gravity" (impact on the network).
+### 3. Data Architecture (Prisma/SQLite)
+The system relies on a relational schema designed to support graph traversal and automated correlation.
+- **Alert**: The primary signal unit. Contains MITRE context.
+- **Event**: Low-level telemetry logs linked to Alerts via `matchedEventIds`.
+- **AttackNode & AttackEdge**: Persistent representation of the graph.
 
 ---
 
-## 🚀 6. Summary: The Impact
-SignalFusion Core transforms a SOC from a **Reactive** firefighting department into a **Proactive** threat-hunting powerhouse. It reduces the time to understand an attack from hours to seconds and the time to respond from minutes to milliseconds.
+## 📂 Project Structure
+
+```text
+SignalFusion Core/
+├── backend/              # Node.js/Express Backend
+│   ├── prisma/           # Database schema & migrations
+│   └── src/
+│       ├── config/       # Security policy configuration
+│       ├── detection/    # Detection engines & orchestration
+│       ├── services/     # Ingestion & normalization
+│       └── simulation/   # 48 attack scenarios
+├── frontend/             # Next.js App Router UI
+│   ├── src/
+│   │   ├── app/          # Pages (Dashboard, Alerts)
+│   │   ├── components/   # Visual SOC components
+│   │   └── services/     # Server Actions
+├── docs/                 # Consolidated documentation
+└── README.md             # Project overview
+```
+
+---
+
+## 🌪 Why SignalFusion?
+
+Traditional SIEMs fail due to **Alert Fatigue**, **Context Fragmentation**, and the **Response Gap**. SignalFusion bridges these gaps with:
+- **Visual-First Strategy**: Showing the exact path an attacker took.
+- **Safety-First Automation**: Built-in simulator for testing playbooks.
+- **Extreme Performance**: Optimized backend handling thousands of graph nodes.

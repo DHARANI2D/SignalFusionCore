@@ -57,11 +57,12 @@ For manual development setup, please refer to the **[Installation Guide](docs/RU
 Detailed guides and documentation are located in the `docs/` directory:
 
 - 📖 **[How to Run](docs/RUNNING.md)** - Getting started and installation guide.
-- 🐳 **[Docker Deployment](docs/DOCKER_DEPLOYMENT.md)** - Complete Docker setup and orchestration.
-- 📘 **[Comprehensive Guide](docs/COMPREHENSIVE_GUIDE.md)** - Full platform documentation.
-- 📥 **[Ingestion Guide](docs/INGESTION_GUIDE.md)** - Methods for log ingestion.
-- 📐 **[Project Structure](docs/PROJECT_STRUCTURE.md)** - Detailed codebase organization.
-- 🧪 **[Test Results](docs/TEST_RESULTS.md)** - Verification and performance testing results.
+- 🏗️ **[Architecture](docs/ARCHITECTURE.md)** - Tech stack, project structure, and technical vision.
+- 🎯 **[Detection Engine](docs/DETECTION_ENGINE.md)** - Logic, risk scoring, and attack path mapping.
+- 📥 **[Ingestion Guide](docs/INGESTION.md)** - REST API, enterprise intake, and field references.
+- 🛡️ **[Operations Guide](docs/OPERATIONS.md)** - Triage workflows, playbooks, and response simulation.
+- � **[Deployment](docs/DEPLOYMENT.md)** - Docker setup and troubleshooting.
+- 🧪 **[Test Results](docs/TESTING.md)** - Verification and performance testing results.
 
 ---
 
@@ -154,7 +155,7 @@ SignalFusion Core provides extensive coverage across the MITRE ATT&CK framework 
 
 ## 🤝 Contributing & Support
 
-- **Support**: For detailed documentation, see the [docs/](docs/) directory.
+- **Support**: For detailed documentation, see the **[Architecture](docs/ARCHITECTURE.md)**, **[Ingestion](docs/INGESTION.md)**, and **[Operations](docs/OPERATIONS.md)** guides.
 - **License**: This project is for educational and demonstration purposes.
 
 ---
