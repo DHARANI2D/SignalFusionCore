@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --color-foreground: rgb(255, 255, 255);
+  --color-background-start: rgb(10, 10, 12);
+  --color-background-end: rgb(0, 0, 0);
+
+  --color-card-bg: rgba(255, 255, 255, 0.03);
+  --color-card-border: rgba(255, 255, 255, 0.1);
+
+  --color-severity-high: #ff4d4d;
+  --color-severity-medium: #ff9900;
+  --color-severity-low: #4d94ff;
+}
+
+:root {
+  --foreground: var(--color-foreground);
+  --background: var(--color-background-start);
+}
+
+body {
+  color: var(--color-foreground);
+  background: linear-gradient(to bottom,
+      transparent,
+      var(--color-background-end)) var(--color-background-start);
+  min-height: 100vh;
+}
+
+.glass-panel {
+  background: var(--color-card-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-card-border);
+  border-radius: 12px;
+}
+
+.severity-high {
+  border-left: 4px solid var(--color-severity-high);
+}
+
+.severity-medium {
+  border-left: 4px solid var(--color-severity-medium);
+}
+
+.severity-low {
+  border-left: 4px solid var(--color-severity-low);
+}
+
+/* Standard Utilities */
+@utility text-balance {
+  text-wrap: balance;
+}
+
+/* Custom Scrollbar for Terminal Display */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.5);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.7);
+}

@@ -1,0 +1,1 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,52075,e=>{"use strict";var t=e.i(71645),r=e.i(18566);function u({intervalMs:e=5e3}){let u=(0,r.useRouter)();return(0,t.useEffect)(()=>{let t=setInterval(()=>{u.refresh()},e);return()=>clearInterval(t)},[u,e]),null}e.s(["AutoRefresh",()=>u])}]);

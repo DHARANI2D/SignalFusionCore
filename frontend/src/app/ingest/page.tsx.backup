@@ -1,0 +1,529 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { Upload, FileJson, Database, Server, Cloud, Play, Square, Activity, AlertCircle, CheckCircle, XCircle } from "lucide-react";
+
+export default function IngestPage() {
+    const [source, setSource] = useState("auth");
+    const [eventType, setEventType] = useState("LOGIN_FAIL");
+    const [jsonData, setJsonData] = useState(`{
+  "timestamp": "${new Date().toISOString()}",
+  "user": "john.doe",
+  "source_ip": "192.168.1.100",
+  "result": "FAILED"
+}`);
+    const [response, setResponse] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
+
+    // Simulator state
+    const [isSimulating, setIsSimulating] = useState(false);
+    const [simulatorStats, setSimulatorStats] = useState({
+        totalSent: 0,
+        successful: 0,
+        failed: 0,
+        alertsGenerated: 0
+    });
+    const [recentLogs, setRecentLogs] = useState<any[]>([]);
+    const simulatorInterval = useRef<NodeJS.Timeout | null>(null);
+
+    const handleIngest = async () => {
+        setLoading(true);
+        setResponse(null);
+
+        try {
+            const parsedData = JSON.parse(jsonData);
+
+            const payload = {
+                source,
+                log: {
+                    eventType,
+                    ...parsedData
+                }
+            };
+
+            const res = await fetch("http://localhost:8001/api/ingest", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await res.json();
+            setResponse(result);
+        } catch (error: any) {
+            setResponse({ error: error.message });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const generateRandomLog = () => {
+        const sources = ["auth", "endpoint", "network", "cloud"];
+        const randomSource = sources[Math.floor(Math.random() * sources.length)];
+
+        // 70% normal activity, 30% suspicious/malicious
+        const isMalicious = Math.random() < 0.3;
+
+        const normalScenarios: any = {
+            auth: [
+                { eventType: "LOGIN_SUCCESS", user: "alice.smith", source_ip: "10.0.1.50", result: "SUCCESS", type: "normal" },
+                { eventType: "LOGIN_SUCCESS", user: "bob.jones", source_ip: "10.0.1.75", result: "SUCCESS", type: "normal" },
+                { eventType: "LOGOUT", user: "carol.white", source_ip: "10.0.1.100", result: "SUCCESS", type: "normal" },
+                { eventType: "PASSWORD_CHANGE", user: "david.brown", source_ip: "10.0.1.125", result: "SUCCESS", type: "normal" },
+                { eventType: "LOGIN_SUCCESS", user: "eve.davis", source_ip: "10.0.1.150", result: "SUCCESS", type: "normal" }
+            ],
+            endpoint: [
+                { eventType: "PROCESS_START", process: "chrome.exe", user: "alice.smith", hostname: "DESKTOP-001", type: "normal" },
+                { eventType: "PROCESS_START", process: "outlook.exe", user: "bob.jones", hostname: "DESKTOP-002", type: "normal" },
+                { eventType: "PROCESS_START", process: "excel.exe", user: "carol.white", hostname: "DESKTOP-003", type: "normal" },
+                { eventType: "FILE_CREATE", file: "report.docx", path: "C:\\Users\\alice\\Documents", user: "alice.smith", type: "normal" },
+                { eventType: "PROCESS_START", process: "teams.exe", user: "david.brown", hostname: "DESKTOP-004", type: "normal" }
+            ],
+            network: [
+                { eventType: "CONNECTION", source_ip: "10.0.1.50", dest_ip: "8.8.8.8", port: 443, bytes: 2048, type: "normal" },
+                { eventType: "DNS_QUERY", domain: "office365.com", source_ip: "10.0.1.75", type: "normal" },
+                { eventType: "CONNECTION", source_ip: "10.0.1.100", dest_ip: "20.190.151.131", port: 443, bytes: 4096, type: "normal" },
+                { eventType: "DNS_QUERY", domain: "github.com", source_ip: "10.0.1.125", type: "normal" },
+                { eventType: "CONNECTION", source_ip: "10.0.1.150", dest_ip: "52.96.0.1", port: 443, bytes: 1024, type: "normal" }
+            ],
+            cloud: [
+                { eventType: "S3_ACCESS", resource: "s3://company-docs/report.pdf", user: "alice.smith", action: "READ", type: "normal" },
+                { eventType: "LAMBDA_EXEC", function: "data-processor", runtime: "python3.9", duration: 250, type: "normal" },
+                { eventType: "EC2_START", instance: "i-1234567890abcdef0", user: "bob.jones", type: "normal" },
+                { eventType: "S3_ACCESS", resource: "s3://company-backups/daily.zip", user: "backup-service", action: "WRITE", type: "normal" },
+                { eventType: "RDS_QUERY", database: "production-db", user: "app-service", query_time: 45, type: "normal" }
+            ]
+        };
+
+        const maliciousScenarios: any = {
+            auth: [
+                { eventType: "LOGIN_FAIL", user: "admin", source_ip: "192.168.1.100", result: "FAILED", attempts: 5, type: "malicious" },
+                { eventType: "BRUTE_FORCE", user: "root", source_ip: "185.220.101.45", attempts: 50, type: "malicious" },
+                { eventType: "LOGIN_FAIL", user: "administrator", source_ip: "203.0.113.45", result: "FAILED", attempts: 10, type: "malicious" }
+            ],
+            endpoint: [
+                { eventType: "PROCESS_START", process: "mimikatz.exe", user: "admin", hostname: "DESKTOP-001", type: "malicious" },
+                { eventType: "PROCESS_START", process: "powershell.exe", user: "admin", args: "-enc base64...", hostname: "DESKTOP-002", type: "malicious" },
+                { eventType: "FILE_CREATE", file: "ransomware.exe", path: "C:\\Temp", user: "admin", type: "malicious" },
+                { eventType: "PROCESS_START", process: "psexec.exe", user: "system", hostname: "DESKTOP-003", type: "malicious" }
+            ],
+            network: [
+                { eventType: "CONNECTION", source_ip: "10.0.0.50", dest_ip: "185.220.101.45", port: 443, bytes: 1048576, type: "malicious" },
+                { eventType: "DNS_QUERY", domain: "malicious-c2-server.com", source_ip: "10.0.0.100", type: "malicious" },
+                { eventType: "PORT_SCAN", source_ip: "192.168.1.200", ports_scanned: 1000, type: "malicious" },
+                { eventType: "CONNECTION", source_ip: "10.0.0.75", dest_ip: "tor-exit-node.onion", port: 9050, bytes: 524288, type: "malicious" }
+            ],
+            cloud: [
+                { eventType: "S3_ACCESS", resource: "s3://sensitive-data/credentials.zip", user: "service-account", action: "DOWNLOAD", size: 52428800, type: "malicious" },
+                { eventType: "IAM_CHANGE", user: "admin", action: "CREATE_USER", new_user: "backdoor-user", type: "malicious" },
+                { eventType: "LAMBDA_EXEC", function: "data-exfil", runtime: "python3.9", duration: 5000, type: "malicious" },
+                { eventType: "S3_DELETE", resource: "s3://company-backups/*", user: "compromised-account", type: "malicious" }
+            ]
+        };
+
+        const scenarios = isMalicious ? maliciousScenarios : normalScenarios;
+        const logs = scenarios[randomSource];
+        const randomLog = logs[Math.floor(Math.random() * logs.length)];
+
+        return { source: randomSource, log: randomLog, isMalicious };
+    };
+
+    const startSimulator = () => {
+        setIsSimulating(true);
+        setSimulatorStats({ totalSent: 0, successful: 0, failed: 0, alertsGenerated: 0 });
+        setRecentLogs([]);
+
+        simulatorInterval.current = setInterval(async () => {
+            const { source, log, isMalicious } = generateRandomLog();
+
+            try {
+                const res = await fetch("http://localhost:8001/api/ingest", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ source, log })
+                });
+
+                const result = await res.json();
+
+                setSimulatorStats(prev => ({
+                    totalSent: prev.totalSent + 1,
+                    successful: prev.successful + 1,
+                    failed: prev.failed,
+                    alertsGenerated: prev.alertsGenerated + (result.alertsGenerated || 0)
+                }));
+
+                setRecentLogs(prev => [{
+                    timestamp: new Date().toISOString(),
+                    source,
+                    eventType: log.eventType,
+                    status: "success",
+                    alerts: result.alertsGenerated || 0,
+                    isMalicious: log.type === "malicious",
+                    details: log.user || log.process || log.domain || log.resource || ""
+                }, ...prev.slice(0, 19)]); // Keep last 20 logs
+
+            } catch (error) {
+                setSimulatorStats(prev => ({
+                    ...prev,
+                    totalSent: prev.totalSent + 1,
+                    failed: prev.failed + 1
+                }));
+
+                setRecentLogs(prev => [{
+                    timestamp: new Date().toISOString(),
+                    source,
+                    eventType: log.eventType,
+                    status: "failed",
+                    alerts: 0,
+                    isMalicious: false,
+                    details: ""
+                }, ...prev.slice(0, 19)]);
+            }
+        }, 1500); // Send every 1.5 seconds for more activity
+    };
+
+    const stopSimulator = () => {
+        setIsSimulating(false);
+        if (simulatorInterval.current) {
+            clearInterval(simulatorInterval.current);
+            simulatorInterval.current = null;
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            if (simulatorInterval.current) {
+                clearInterval(simulatorInterval.current);
+            }
+        };
+    }, []);
+
+    const templates = {
+        auth: `{
+  "timestamp": "${new Date().toISOString()}",
+  "user": "john.doe",
+  "source_ip": "192.168.1.100",
+  "result": "FAILED",
+  "geo_location": "US"
+}`,
+        endpoint: `{
+  "timestamp": "${new Date().toISOString()}",
+  "process": "powershell.exe",
+  "parent_process": "cmd.exe",
+  "hostname": "DESKTOP-ABC123",
+  "user": "admin"
+}`,
+        network: `{
+  "timestamp": "${new Date().toISOString()}",
+  "source_ip": "10.0.0.50",
+  "dest_ip": "185.220.101.45",
+  "port": 443,
+  "type": "HTTPS",
+  "bytes_transferred": 1048576
+}`,
+        cloud: `{
+  "timestamp": "${new Date().toISOString()}",
+  "action": "S3_OBJECT_UPLOAD",
+  "resource": "s3://company-data/sensitive.zip",
+  "user": "service-account",
+  "status": "SUCCESS",
+  "size": "52428800"
+}`
+    };
+
+    const sourceIcons = {
+        auth: Database,
+        endpoint: Server,
+        network: Upload,
+        cloud: Cloud
+    };
+
+    return (
+        <div className="flex flex-col gap-6">
+            {/* Enhanced Header with Gradient */}
+            <header className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border border-white/10 p-6">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5 animate-pulse"></div>
+                <div className="relative">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                            <Upload className="w-6 h-6 text-blue-400" />
+                        </div>
+                        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                            Log Ingestion Center
+                        </h1>
+                    </div>
+                    <p className="text-white/50 ml-14">Manual and automated security log ingestion with real-time threat detection</p>
+                </div>
+            </header>
+
+            {/* Enhanced Continuous Simulator */}
+            <div className="glass-panel p-6 relative overflow-hidden">
+                {/* Animated Background */}
+                {isSimulating && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 via-blue-500/5 to-purple-500/5 animate-pulse"></div>
+                )}
+
+                <div className="relative">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg border transition-all ${isSimulating
+                                ? 'bg-green-500/20 border-green-500/30 animate-pulse'
+                                : 'bg-white/5 border-white/10'
+                                }`}>
+                                <Activity className={`w-5 h-5 ${isSimulating ? 'text-green-400' : 'text-white/60'}`} />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-semibold">Continuous Data Simulator</h2>
+                                <p className="text-xs text-white/40">Realistic system activity with threat scenarios</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={isSimulating ? stopSimulator : startSimulator}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all transform hover:scale-105 active:scale-95 shadow-lg ${isSimulating
+                                ? "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-red-500/50"
+                                : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-green-500/50"
+                                }`}
+                        >
+                            {isSimulating ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                            {isSimulating ? "Stop Simulator" : "Start Simulator"}
+                        </button>
+                    </div>
+
+                    {/* Enhanced Stats Grid */}
+                    <div className="grid grid-cols-4 gap-4 mb-6">
+                        <div className="relative group">
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div className="relative bg-white/5 rounded-lg p-4 border border-white/10 hover:border-white/20 transition-all">
+                                <div className="text-white/50 text-xs mb-1 font-medium">Total Events</div>
+                                <div className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                                    {simulatorStats.totalSent}
+                                </div>
+                                <div className="text-xs text-white/30 mt-1">All ingested logs</div>
+                            </div>
+                        </div>
+
+                        <div className="relative group">
+                            <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div className="relative bg-green-500/10 rounded-lg p-4 border border-green-500/20 hover:border-green-500/30 transition-all">
+                                <div className="text-green-300 text-xs mb-1 font-medium">Successful</div>
+                                <div className="text-3xl font-bold text-green-400">{simulatorStats.successful}</div>
+                                <div className="text-xs text-green-300/50 mt-1">
+                                    {simulatorStats.totalSent > 0 ? Math.round((simulatorStats.successful / simulatorStats.totalSent) * 100) : 0}% success rate
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="relative group">
+                            <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div className="relative bg-red-500/10 rounded-lg p-4 border border-red-500/20 hover:border-red-500/30 transition-all">
+                                <div className="text-red-300 text-xs mb-1 font-medium">Failed</div>
+                                <div className="text-3xl font-bold text-red-400">{simulatorStats.failed}</div>
+                                <div className="text-xs text-red-300/50 mt-1">
+                                    {simulatorStats.totalSent > 0 ? Math.round((simulatorStats.failed / simulatorStats.totalSent) * 100) : 0}% failure rate
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="relative group">
+                            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-yellow-500/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div className="relative bg-orange-500/10 rounded-lg p-4 border border-orange-500/20 hover:border-orange-500/30 transition-all">
+                                <div className="text-orange-300 text-xs mb-1 font-medium flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    Alerts Generated
+                                </div>
+                                <div className="text-3xl font-bold text-orange-400">{simulatorStats.alertsGenerated}</div>
+                                <div className="text-xs text-orange-300/50 mt-1">
+                                    {simulatorStats.totalSent > 0 ? Math.round((simulatorStats.alertsGenerated / simulatorStats.totalSent) * 100) : 0}% detection rate
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Recent Logs - Laptop Screen Style */}
+            <div className="mt-6">
+                <h3 className="text-sm font-semibold text-white/70 mb-3">Live Activity Monitor</h3>
+
+                {/* Laptop Screen Container */}
+                <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-2xl p-4 shadow-2xl border border-white/10">
+                    {/* Screen Header (like laptop bezel) */}
+                    <div className="flex items-center justify-between mb-3 px-2">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                        </div>
+                        <div className="text-xs text-white/40 font-mono">SignalFusion Terminal</div>
+                        <div className="w-16"></div>
+                    </div>
+
+                    {/* Screen Display */}
+                    <div className="bg-black rounded-lg border-2 border-slate-700 shadow-inner">
+                        {/* Terminal Header */}
+                        <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-green-400" />
+                                <span className="text-xs text-green-400 font-mono">LIVE FEED</span>
+                            </div>
+                            {isSimulating && (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                    <span className="text-xs text-green-400 font-mono">STREAMING</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Scrollable Content */}
+                        <div className="h-80 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                            {recentLogs.length === 0 ? (
+                                <div className="flex items-center justify-center h-full">
+                                    <div className="text-center">
+                                        <Activity className="w-12 h-12 text-white/20 mx-auto mb-2" />
+                                        <p className="text-white/40 text-sm font-mono">Waiting for data stream...</p>
+                                        <p className="text-white/20 text-xs font-mono mt-1">Start simulator to begin</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                recentLogs.map((log, i) => (
+                                    <div
+                                        key={i}
+                                        className={`flex items-start gap-3 rounded px-3 py-2.5 text-sm border transition-colors font-mono ${log.isMalicious
+                                            ? 'bg-red-900/20 border-red-800 hover:border-red-700'
+                                            : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                                            }`}
+                                    >
+                                        {log.status === "success" ? (
+                                            <CheckCircle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${log.isMalicious ? 'text-orange-400' : 'text-green-400'}`} />
+                                        ) : (
+                                            <XCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                <span className="text-white/40 text-xs">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                                                <span className={`text-xs uppercase font-semibold ${log.source === 'auth' ? 'text-blue-400' :
+                                                    log.source === 'endpoint' ? 'text-purple-400' :
+                                                        log.source === 'network' ? 'text-cyan-400' :
+                                                            'text-green-400'
+                                                    }`}>{log.source}</span>
+                                                <span className="text-white/60 text-xs">{log.eventType}</span>
+                                                {log.isMalicious && (
+                                                    <span className="text-xs bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded">SUSPICIOUS</span>
+                                                )}
+                                            </div>
+                                            {log.details && (
+                                                <div className="text-xs text-white/40 truncate">{log.details}</div>
+                                            )}
+                                            {log.alerts > 0 && (
+                                                <div className="flex items-center gap-1 text-xs text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded w-fit mt-1">
+                                                    <AlertCircle className="w-3 h-3" />
+                                                    <span>{log.alerts} alert{log.alerts > 1 ? 's' : ''} triggered</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Terminal Footer */}
+                        <div className="bg-slate-900 px-4 py-2 border-t border-slate-700 flex items-center justify-between text-xs font-mono">
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-white/70 mb-2">Source</label>
+                                    <select
+                                        value={source}
+                                        onChange={(e) => {
+                                            setSource(e.target.value);
+                                            setJsonData(templates[e.target.value as keyof typeof templates]);
+                                        }}
+                                        className="w-full bg-white/5 text-white rounded-lg px-4 py-2.5 border border-white/10 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+                                    >
+                                        <option value="auth">Authentication</option>
+                                        <option value="endpoint">Endpoint</option>
+                                        <option value="network">Network</option>
+                                        <option value="cloud">Cloud</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-white/70 mb-2">Event Type</label>
+                                    <input
+                                        type="text"
+                                        value={eventType}
+                                        onChange={(e) => setEventType(e.target.value)}
+                                        className="w-full bg-white/5 text-white rounded-lg px-4 py-2.5 border border-white/10 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+                                        placeholder="e.g., LOGIN_FAIL, PROCESS_START"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-white/70 mb-2">Event Data (JSON)</label>
+                                    <textarea
+                                        value={jsonData}
+                                        onChange={(e) => setJsonData(e.target.value)}
+                                        rows={10}
+                                        className="w-full bg-white/5 text-white rounded-lg px-4 py-3 border border-white/10 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-sm transition-colors resize-none"
+                                        placeholder="Enter JSON data..."
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={handleIngest}
+                                    disabled={loading}
+                                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    <Upload className="w-4 h-4" />
+                                    {loading ? "Ingesting..." : "Ingest Event"}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Right Panel - Response & Info */}
+                        <div className="flex flex-col gap-6">
+                            {/* Response */}
+                            <div className="glass-panel p-6 flex-1">
+                                <h2 className="text-lg font-semibold mb-4">Response</h2>
+
+                                {response ? (
+                                    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                                        <pre className="text-sm text-white/80 overflow-auto max-h-48 font-mono">
+                                            {JSON.stringify(response, null, 2)}
+                                        </pre>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white/5 rounded-lg p-8 border border-white/10 text-center">
+                                        <p className="text-white/40 text-sm">Response will appear here after ingestion</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Enterprise Methods */}
+                            <div className="glass-panel p-6">
+                                <h3 className="text-sm font-semibold text-white/70 mb-3">Enterprise Ingestion</h3>
+                                <div className="space-y-2 text-xs text-white/60">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                        <code className="text-white/80">POST /api/enterprise/ingest/batch</code>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                        <code className="text-white/80">POST /api/enterprise/ingest/webhook</code>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                        <code className="text-white/80">POST /api/enterprise/ingest/syslog</code>
+                                    </div>
+                                </div>
+                                <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                    <p className="text-xs text-blue-300">
+                                        <strong>📚 Docs:</strong> See <code className="bg-white/10 px-1.5 py-0.5 rounded text-xs">ENTERPRISE_INGESTION.md</code>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div >
+            </div >
+            );
+}

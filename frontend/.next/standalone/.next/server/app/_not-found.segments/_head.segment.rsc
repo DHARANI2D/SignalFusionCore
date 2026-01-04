@@ -1,0 +1,5 @@
+1:"$Sreact.fragment"
+2:I[97367,["/_next/static/chunks/7b97c9d9f6234193.js","/_next/static/chunks/7340adf74ff47ec0.js","/_next/static/chunks/fc6f8a4bd53ec5a5.js"],"ViewportBoundary"]
+3:I[97367,["/_next/static/chunks/7b97c9d9f6234193.js","/_next/static/chunks/7340adf74ff47ec0.js","/_next/static/chunks/fc6f8a4bd53ec5a5.js"],"MetadataBoundary"]
+4:"$Sreact.suspense"
+0:{"buildId":"uTYSRrTw4ZAqC1-u9Iq65","rsc":["$","$1","h",{"children":[["$","meta",null,{"name":"robots","content":"noindex"}],["$","$L2",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","div",null,{"hidden":true,"children":["$","$L3",null,{"children":["$","$4",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"SignalFusion Core | SOC Command Center"}],["$","meta","1",{"name":"description","content":"Advanced threat correlation and alert triage engine"}]]}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}

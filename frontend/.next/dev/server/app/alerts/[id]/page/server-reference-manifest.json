@@ -1,0 +1,35 @@
+{
+  "node": {
+    "70dbf488ff80a68bff8fed5d61c667799859fab48d": {
+      "workers": {
+        "app/alerts/[id]/page": {
+          "moduleId": "[project]/.next-internal/server/app/alerts/[id]/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/services/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "addAlertNote",
+          "filename": "src/services/actions.ts"
+        }
+      },
+      "layer": {
+        "app/alerts/[id]/page": "action-browser"
+      },
+      "exportedName": "addAlertNote",
+      "filename": "src/services/actions.ts"
+    },
+    "7022c1bd2edeecd35a6629c6837b4ea94d263123b3": {
+      "workers": {
+        "app/alerts/[id]/page": {
+          "moduleId": "[project]/.next-internal/server/app/alerts/[id]/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/services/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "updateAlertStatus",
+          "filename": "src/services/actions.ts"
+        }
+      },
+      "layer": {
+        "app/alerts/[id]/page": "action-browser"
+      },
+      "exportedName": "updateAlertStatus",
+      "filename": "src/services/actions.ts"
+    }
+  },
+  "edge": {}
+}

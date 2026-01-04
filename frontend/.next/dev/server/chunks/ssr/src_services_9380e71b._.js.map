@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":""}},
+    {"offset": {"line": 12, "column": 0}, "map": {"version":3,"sources":["file:///Users/dharanidharansenthilkumar/Projects/SignalFusion%20Core/frontend/src/services/actions.ts"],"sourcesContent":["\"use server\";\n\nimport { revalidatePath } from \"next/cache\";\nimport { getApiUrl } from \"@/lib/api\";\n\nexport async function updateAlertStatus(alertId: string, status: string, user: string = \"Analyst\") {\n    const res = await fetch(`${getApiUrl()}/api/alerts/${alertId}/status`, {\n        method: \"PATCH\",\n        headers: { \"Content-Type\": \"application/json\" },\n        body: JSON.stringify({ status, user }),\n    });\n\n    if (!res.ok) throw new Error(\"Failed to update status\");\n\n    revalidatePath(`/alerts/${alertId}`);\n    revalidatePath(\"/\");\n}\n\nexport async function addAlertNote(alertId: string, content: string, user: string) {\n    const res = await fetch(`${getApiUrl()}/api/alerts/${alertId}/notes`, {\n        method: \"POST\",\n        headers: { \"Content-Type\": \"application/json\" },\n        body: JSON.stringify({ content, user }),\n    });\n\n    if (!res.ok) throw new Error(\"Failed to add note\");\n\n    revalidatePath(`/alerts/${alertId}`);\n}\n"],"names":[],"mappings":";;;;;;;MAKsB,wBAAA,WAAA,GAAA,IAAA,+OAAA,EAAA,8CAAA,oOAAA,EAAA,KAAA,GAAA,0OAAA,EAAA,qDAAA"}}]
+}

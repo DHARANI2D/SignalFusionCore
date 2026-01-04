@@ -1,0 +1,815 @@
+// SignalFusion Core - Database-Driven Configuration System
+// Supports dynamic MITRE data, scenarios, rules, and threat intelligence
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// EVENT & ALERT MODELS (Existing)
+// ============================================================================
+
+model Event {
+  id         String   @id @default(uuid())
+  timestamp  DateTime
+  ingestedAt DateTime @default(now())
+
+  source    String
+  eventType String
+
+  user    String?
+  process String?
+  service String?
+
+  sourceIp String?
+  destIp   String?
+  geo      String?
+
+  severityHint   String
+  confidenceHint Float  @default(0.5)
+
+  metadata String
+}
+
+model Alert {
+  id          String  @id @default(uuid())
+  summary     String
+  description String?
+  severity    String
+  confidence  Float
+  status      String  @default("New")
+  priority    String? @default("Medium")
+
+  signals         String
+  detectorName    String
+  detectionMethod String?
+  alertType       String?
+  category        String?
+  subcategory     String?
+
+  mitreTactics       String
+  mitreTechniques    String
+  mitreSubTechniques String?
+  killChainPhase     String?
+
+  riskScore      Float?  @default(0)
+  riskLevel      String?
+  riskMessage    String?
+  riskObject     String?
+  riskObjectType String?
+  threatScore    Float?
+  impactScore    Float?
+  urgencyScore   Float?
+
+  threatObject     String?
+  threatObjectType String?
+  iocType          String?
+  iocValue         String?
+  threatActor      String?
+  threatGroup      String?
+  campaignName     String?
+  malwareFamily    String?
+  attackVector     String?
+  threatConfidence String?
+
+  user           String?
+  userName       String?
+  userEmail      String?
+  userDomain     String?
+  userBunit      String?
+  userDepartment String?
+  userTitle      String?
+  userCategory   String?
+  userRiskScore  Float?
+  userEndDate    String?
+  userId         String?
+  userSid        String?
+
+  hostName        String?
+  hostIp          String?
+  hostMac         String?
+  hostOs          String?
+  hostOsVersion   String?
+  hostDomain      String?
+  hostCriticality String?
+  assetId         String?
+  assetOwner      String?
+  assetValue      String?
+  agentId         String?
+  sensorId        String?
+
+  sourceIp       String?
+  sourcePort     Int?
+  sourceHostname String?
+  sourceCountry  String?
+  destIp         String?
+  destPort       Int?
+  destHostname   String?
+  destCountry    String?
+  protocol       String?
+  networkZone    String?
+  bytesIn        Int?
+  bytesOut       Int?
+  packetsIn      Int?
+  packetsOut     Int?
+
+  fileName           String?
+  filePath           String?
+  fileHash           String?
+  fileHashType       String?
+  fileSize           Int?
+  processName        String?
+  processId          Int?
+  processCommandLine String?
+  parentProcess      String?
+  parentProcessId    Int?
+
+  ruleId               String?
+  ruleName             String?
+  ruleVersion          String?
+  correlationId        String?
+  correlationName      String?
+  notableEventId       String?
+  previousNotableCount Int?    @default(0)
+  relatedAlertIds      String?
+
+  startTime DateTime?
+  endTime   DateTime?
+  duration  Int?
+  firstSeen DateTime?
+  lastSeen  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  assignedTo          String?
+  assignedTeam        String?
+  investigationStatus String?
+  incidentId          String?
+  caseId              String?
+  ticketId            String?
+  playbookName        String?
+  automationStatus    String?
+
+  complianceFramework   String?
+  policyViolation       String?
+  policyName            String?
+  regulatoryRequirement String?
+  dataClassification    String?
+
+  matchedEventIds  String
+  evidenceIds      String?
+  artifactIds      String?
+  reasoning        String
+  attackPath       String?
+  remediationSteps String?
+
+  sourceSystem String?
+  sourceIndex  String?
+  sourceType   String?
+  vendor       String?
+  product      String?
+  version      String?
+
+  tags         String?
+  labels       String?
+  customFields String?
+  rawEvent     String?
+
+  notes     Note[]
+  auditLogs AuditLog[]
+
+  @@index([severity])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([user])
+  @@index([hostName])
+  @@index([sourceIp])
+  @@index([riskScore])
+  @@index([threatActor])
+  @@index([ruleId])
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  alertId   String
+  alert     Alert    @relation(fields: [alertId], references: [id])
+  content   String
+  user      String
+  noteType  String?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  alertId   String
+  alert     Alert    @relation(fields: [alertId], references: [id])
+  action    String
+  actor     String
+  actorType String?
+  timestamp DateTime @default(now())
+  details   String?
+  fromValue String?
+  toValue   String?
+}
+
+// ============================================================================
+// MITRE ATT&CK FRAMEWORK (New)
+// ============================================================================
+
+model MitreTactic {
+  id          String           @id @default(uuid())
+  tacticId    String           @unique // TA0001
+  name        String // Initial Access
+  description String?
+  url         String?
+  order       Int              @default(0)
+  techniques  MitreTechnique[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([tacticId])
+  @@index([order])
+}
+
+model MitreTechnique {
+  id             String              @id @default(uuid())
+  techniqueId    String              @unique // T1566
+  name           String // Phishing
+  description    String?
+  url            String?
+  tacticId       String
+  tactic         MitreTactic         @relation(fields: [tacticId], references: [id])
+  subTechniques  MitreSubTechnique[]
+  scenarios      AttackScenario[]
+  detectionRules DetectionRule[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([techniqueId])
+  @@index([tacticId])
+}
+
+model MitreSubTechnique {
+  id             String         @id @default(uuid())
+  subTechniqueId String         @unique // T1566.001
+  name           String // Spearphishing Attachment
+  description    String?
+  url            String?
+  techniqueId    String
+  technique      MitreTechnique @relation(fields: [techniqueId], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([subTechniqueId])
+  @@index([techniqueId])
+}
+
+// ============================================================================
+// ATTACK SCENARIOS (New)
+// ============================================================================
+
+model AttackScenario {
+  id          String  @id @default(uuid())
+  scenarioId  String  @unique // phishing-001
+  name        String
+  description String?
+  severity    String // low, medium, high, critical
+  enabled     Boolean @default(true)
+
+  // MITRE Mapping
+  techniques     MitreTechnique[]
+  tacticNames    String // JSON array
+  techniqueNames String // JSON array
+
+  // Log Templates
+  logTemplates LogTemplate[]
+
+  // Metadata
+  tags      String? // JSON array
+  author    String?
+  version   String   @default("1.0")
+  category  String? // malware, phishing, lateral_movement
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([severity])
+  @@index([enabled])
+  @@index([category])
+}
+
+model LogTemplate {
+  id         String         @id @default(uuid())
+  scenarioId String
+  scenario   AttackScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  source    String // auth, endpoint, network, cloud
+  eventType String
+  delay     Int    @default(0) // milliseconds
+
+  // Template data (JSON with placeholders)
+  template String // JSON object
+
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([scenarioId])
+  @@index([order])
+}
+
+// ============================================================================
+// DETECTION RULES (New)
+// ============================================================================
+
+model DetectionRule {
+  id          String  @id @default(uuid())
+  ruleId      String  @unique
+  name        String
+  description String?
+  enabled     Boolean @default(true)
+
+  // Rule Configuration
+  detectorType String // reconnaissance, credential_harvesting, etc.
+  severity     String // low, medium, high, critical
+  confidence   Float  @default(0.5)
+
+  // Conditions (JSON defining detection logic)
+  conditions String // JSON object
+
+  // MITRE Mapping
+  techniques      MitreTechnique[]
+  mitreTactics    String // JSON array
+  mitreTechniques String // JSON array
+
+  // Signals
+  signals String // JSON array
+
+  // Metadata
+  author    String?
+  version   String   @default("1.0")
+  category  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled])
+  @@index([detectorType])
+  @@index([severity])
+}
+
+// ============================================================================
+// THREAT INTELLIGENCE (New)
+// ============================================================================
+
+model ThreatIntelligence {
+  id       String @id @default(uuid())
+  iocType  String // ip, domain, hash, url, email, registry, mutex
+  iocValue String
+
+  // Threat Context
+  threatActor   String?
+  threatGroup   String?
+  malwareFamily String?
+  campaignName  String?
+  severity      String  @default("medium")
+  confidence    String  @default("medium") // low, medium, high, confirmed
+
+  // Source
+  source    String? // crowdstrike, virustotal, custom, manual
+  sourceUrl String?
+  firstSeen DateTime
+  lastSeen  DateTime
+  expiresAt DateTime?
+
+  // Status
+  active Boolean @default(true)
+
+  // Metadata
+  tags       String? // JSON array
+  notes      String?
+  references String? // JSON array of URLs
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([iocType, iocValue])
+  @@index([iocType])
+  @@index([active])
+  @@index([expiresAt])
+  @@index([severity])
+}
+
+// ============================================================================
+// SYSTEM CONFIGURATION (New)
+// ============================================================================
+
+model SystemConfig {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String // JSON value
+  category    String // detection, simulation, general, ui
+  description String?
+  dataType    String // string, number, boolean, json, array
+  isPublic    Boolean  @default(false) // Can be accessed by frontend
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@index([category])
+  @@index([isPublic])
+}
+
+// ============================================================================
+// IOC MATCHING & ENRICHMENT (New - Phase 2)
+// ============================================================================
+
+model IOCMatch {
+  id      String  @id @default(uuid())
+  eventId String
+  alertId String?
+
+  iocType      String // ip, domain, hash, url
+  iocValue     String
+  matchedField String // sourceIp, destIp, fileHash, etc.
+
+  // Threat Intel Reference
+  threatIntelId String?
+  threatActor   String?
+  malwareFamily String?
+  severity      String
+  confidence    String
+
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+  @@index([alertId])
+  @@index([iocValue])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// ATTACK GRAPH (New - Phase 3)
+// ============================================================================
+
+model AttackNode {
+  id String @id @default(uuid())
+
+  // Node Type & Identity
+  nodeType String // alert, entity, technique, ioc
+  label    String
+
+  // Alert/Event Reference
+  alertId String?
+  eventId String?
+
+  // MITRE Mapping
+  technique String? // T1003
+  tactic    String? // Credential Access
+
+  // Entity Information
+  entityType  String? // user, host, ip, process
+  entityValue String?
+
+  // Severity & Risk
+  severity  String @default("low")
+  riskScore Float  @default(0)
+
+  // Temporal
+  timestamp DateTime
+
+  // Metadata (JSON)
+  metadata String // {user, host, ip, process, etc.}
+
+  // Graph Relationships
+  sourceEdges AttackEdge[] @relation("source")
+  targetEdges AttackEdge[] @relation("target")
+
+  // Chain Membership
+  chainIds String? // JSON array of chain IDs
+
+  createdAt DateTime @default(now())
+
+  @@index([nodeType])
+  @@index([alertId])
+  @@index([timestamp])
+  @@index([severity])
+}
+
+model AttackEdge {
+  id String @id @default(uuid())
+
+  sourceId String
+  targetId String
+
+  // Edge Properties
+  edgeType     String // temporal, causal, lateral, credential
+  relationship String? // uses, accesses, spawns, connects_to
+  weight       Float   @default(1.0)
+  confidence   Float   @default(0.5)
+
+  // Temporal
+  timestamp DateTime?
+
+  // References
+  source AttackNode @relation("source", fields: [sourceId], references: [id], onDelete: Cascade)
+  target AttackNode @relation("target", fields: [targetId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([sourceId])
+  @@index([targetId])
+  @@index([edgeType])
+}
+
+model AttackChain {
+  id String @id @default(uuid())
+
+  name        String
+  description String?
+
+  // Temporal Bounds
+  startTime DateTime
+  endTime   DateTime?
+  duration  Int? // seconds
+
+  // Status
+  status   String @default("active") // active, resolved, investigating
+  severity String
+
+  // MITRE Coverage
+  tactics    String // JSON array
+  techniques String // JSON array
+
+  // Nodes & Edges
+  nodeIds String // JSON array
+  edgeIds String? // JSON array
+
+  // Affected Entities
+  users String? // JSON array
+  hosts String? // JSON array
+  ips   String? // JSON array
+
+  // Risk Assessment
+  riskScore   Float  @default(0)
+  impactScore Float?
+
+  // Investigation
+  assignedTo String?
+  notes      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([severity])
+  @@index([startTime])
+  @@index([riskScore])
+}
+
+// ============================================================================
+// ANALYTICS & METRICS (New - Phase 4)
+// ============================================================================
+
+model AnalyticsMetric {
+  id String @id @default(uuid())
+
+  metricType String // mttd, mttr, alert_volume, detection_rate
+  metricName String
+
+  value Float
+  unit  String? // seconds, count, percentage
+
+  // Time Period
+  timestamp   DateTime
+  period      String // hourly, daily, weekly, monthly
+  periodStart DateTime
+  periodEnd   DateTime
+
+  // Dimensions (for filtering/grouping)
+  severity String?
+  detector String?
+  tactic   String?
+
+  // Metadata
+  metadata String? // JSON
+
+  createdAt DateTime @default(now())
+
+  @@index([metricType])
+  @@index([period])
+  @@index([timestamp])
+}
+
+model ComplianceCheck {
+  id String @id @default(uuid())
+
+  framework   String // PCI-DSS, HIPAA, SOC2, ISO27001, NIST
+  controlId   String
+  controlName String
+  description String?
+
+  // Status
+  status String // compliant, non-compliant, partial, not_applicable
+  score  Float? // 0-100
+
+  // Evidence
+  evidenceType  String? // alert, event, configuration
+  evidenceIds   String? // JSON array
+  evidenceCount Int     @default(0)
+
+  // Assessment
+  assessedBy String?
+  assessedAt DateTime
+  nextReview DateTime?
+
+  // Findings
+  findings    String? // JSON array
+  remediation String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([framework, controlId])
+  @@index([framework])
+  @@index([status])
+  @@index([assessedAt])
+}
+
+model TrendData {
+  id String @id @default(uuid())
+
+  dataType String // alert_volume, severity_dist, top_techniques
+
+  // Time Period
+  timestamp DateTime
+  period    String // hourly, daily, weekly
+
+  // Data (JSON)
+  data String // Flexible JSON structure
+
+  // Aggregation
+  count Int?
+  sum   Float?
+  avg   Float?
+  min   Float?
+  max   Float?
+
+  createdAt DateTime @default(now())
+
+  @@index([dataType])
+  @@index([period])
+  @@index([timestamp])
+}
+
+// ============================================================================
+// RESPONSE PLAYBOOKS (New - Phase 5)
+// ============================================================================
+
+model Playbook {
+  id String @id @default(uuid())
+
+  name        String
+  description String?
+
+  // Trigger Configuration (JSON)
+  trigger String // {conditions, logic}
+
+  // Status
+  enabled  Boolean @default(true)
+  priority Int     @default(0)
+
+  // Execution Settings
+  autoExecute     Boolean @default(false)
+  requireApproval Boolean @default(true)
+  timeout         Int     @default(300) // seconds
+
+  // Actions
+  actions PlaybookAction[]
+
+  // Execution History
+  executions PlaybookExecution[]
+
+  // Metadata
+  author  String?
+  version String  @default("1.0")
+  tags    String? // JSON array
+
+  // Stats
+  executionCount Int @default(0)
+  successCount   Int @default(0)
+  failureCount   Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled])
+  @@index([priority])
+}
+
+model PlaybookAction {
+  id String @id @default(uuid())
+
+  playbookId String
+  playbook   Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+
+  order Int
+  name  String
+
+  // Action Type
+  actionType String // isolate_host, block_ip, notify_slack, create_ticket
+
+  // Parameters (JSON)
+  parameters String // {ip, reason, duration, etc.}
+
+  // Conditional Execution
+  condition String? // JSON condition
+
+  // Approval
+  requireApproval Boolean @default(false)
+
+  // Retry Logic
+  retryCount Int @default(0)
+  retryDelay Int @default(5) // seconds
+
+  // Timeout
+  timeout Int @default(60) // seconds
+
+  createdAt DateTime @default(now())
+
+  @@index([playbookId])
+  @@index([order])
+}
+
+model PlaybookExecution {
+  id String @id @default(uuid())
+
+  playbookId String
+  playbook   Playbook @relation(fields: [playbookId], references: [id])
+
+  // Trigger
+  alertId     String?
+  eventId     String?
+  triggeredBy String // auto, manual, scheduled
+
+  // Status
+  status String // pending, running, completed, failed, cancelled
+
+  // Timing
+  startTime DateTime
+  endTime   DateTime?
+  duration  Int? // seconds
+
+  // Results (JSON array of action results)
+  results String // [{action, status, output, error}]
+
+  // Approval
+  approvalStatus String? // pending, approved, rejected
+  approvedBy     String?
+  approvedAt     DateTime?
+
+  // Error Handling
+  error        String?
+  failedAction String?
+
+  // Context
+  context String? // JSON snapshot of alert/event
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([playbookId])
+  @@index([status])
+  @@index([startTime])
+  @@index([alertId])
+}
+
+model PlaybookApproval {
+  id String @id @default(uuid())
+
+  executionId String
+  actionId    String
+
+  // Request
+  requestedBy String
+  requestedAt DateTime @default(now())
+  reason      String?
+
+  // Decision
+  status    String // pending, approved, rejected
+  decidedBy String?
+  decidedAt DateTime?
+  comments  String?
+
+  // Context
+  actionType String
+  parameters String // JSON
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([executionId])
+  @@index([status])
+  @@index([requestedAt])
+}

@@ -1,0 +1,14 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/alerts/[id]/page": "/alerts/[id]",
+  "/alerts/page": "/alerts",
+  "/analytics/page": "/analytics",
+  "/attack-graph/page": "/attack-graph",
+  "/ingest/page": "/ingest",
+  "/metrics/page": "/metrics",
+  "/page": "/",
+  "/playbooks/page": "/playbooks",
+  "/settings/page": "/settings",
+  "/threat-intel/page": "/threat-intel"
+}
