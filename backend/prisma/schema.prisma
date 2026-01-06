@@ -179,9 +179,10 @@ model Alert {
   labels       String?
   customFields String?
   rawEvent     String?
-
+  // Relations
   notes     Note[]
   auditLogs AuditLog[]
+  approvals PlaybookApproval[]
 
   @@index([severity])
   @@index([status])
@@ -400,6 +401,24 @@ model ThreatIntelligence {
   @@index([active])
   @@index([expiresAt])
   @@index([severity])
+}
+
+// ============================================================================
+// THREAT INTELLIGENCE CACHE (External API Results)
+// ============================================================================
+
+model ThreatIntelCache {
+  id            String   @id @default(uuid())
+  indicator     String   // IP, hash, domain, or URL
+  indicatorType String   // "ip", "hash", "domain", "url"
+  results       String   // JSON string of results from APIs
+  checkedAt     DateTime @default(now())
+  expiresAt     DateTime // Cache expiration
+
+  @@unique([indicator, indicatorType])
+  @@index([indicator])
+  @@index([indicatorType])
+  @@index([expiresAt])
 }
 
 // ============================================================================
@@ -690,6 +709,7 @@ model Playbook {
 
   // Execution History
   executions PlaybookExecution[]
+  approvals  PlaybookApproval[]
 
   // Metadata
   author  String?
@@ -788,28 +808,26 @@ model PlaybookExecution {
 model PlaybookApproval {
   id String @id @default(uuid())
 
-  executionId String
-  actionId    String
+  playbookId String
+  playbook   Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
 
-  // Request
-  requestedBy String
+  alertId String
+  alert   Alert  @relation(fields: [alertId], references: [id], onDelete: Cascade)
+
+  status String @default("pending") // pending, approved, rejected
+
   requestedAt DateTime @default(now())
-  reason      String?
+  requestedBy String   @default("system")
 
-  // Decision
-  status    String // pending, approved, rejected
-  decidedBy String?
-  decidedAt DateTime?
-  comments  String?
+  approvedAt DateTime?
+  approvedBy String?
 
-  // Context
-  actionType String
-  parameters String // JSON
+  reason String? // Rejection reason or approval notes
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([executionId])
+  @@index([playbookId])
+  @@index([alertId])
   @@index([status])
-  @@index([requestedAt])
 }

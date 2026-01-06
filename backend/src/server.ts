@@ -7,6 +7,8 @@ import { detectionEngine } from "./detection/engine";
 import { simulationEngine } from "./simulation/engine";
 import { enterpriseIngestionRouter } from "./services/enterpriseIngestion";
 import { threatIntelRouter } from "./routes/threatIntel";
+import { threatIntelService } from "./services/threatIntelService";
+
 
 
 dotenv.config();
@@ -205,8 +207,22 @@ app.get("/api/alerts/:id", async (req, res) => {
             matchedEventIds: JSON.parse(alert.matchedEventIds)
         };
 
-        // Return alert with events
-        res.json({ ...parsedAlert, events });
+        // Fetch playbook executions for this alert
+        const executions = await prisma.playbookExecution.findMany({
+            where: { alertId: req.params.id },
+            include: { playbook: true },
+            orderBy: { startTime: 'desc' }
+        });
+
+        // Fetch pending approvals for this alert
+        const approvals = await prisma.playbookApproval.findMany({
+            where: { alertId: req.params.id, status: 'pending' },
+            include: { playbook: true },
+            orderBy: { requestedAt: 'desc' }
+        });
+
+        // Return alert with events, executions, and approvals
+        res.json({ ...parsedAlert, events, executions, approvals });
     } catch (error: any) {
         console.error("Error fetching alert:", error);
         res.status(500).json({ error: error.message });
@@ -232,10 +248,10 @@ app.patch("/api/alerts/:id/status", async (req, res) => {
         prisma.auditLog.create({
             data: {
                 alertId,
-                user: user || "System",
+                actor: user || "System",
                 action: "STATUS_CHANGE",
-                previousState: oldAlert.status,
-                newState: status,
+                fromValue: oldAlert.status,
+                toValue: status,
             },
         }),
     ]);
@@ -252,9 +268,9 @@ app.post("/api/alerts/:id/remediate", async (req, res) => {
     await prisma.auditLog.create({
         data: {
             alertId,
-            user: user || "System Orchestrator",
+            actor: user || "System Orchestrator",
             action: "REMEDIATION_EXECUTED",
-            newState: `Action context: ${action}`,
+            details: `Action context: ${action}`,
         },
     });
 
@@ -280,14 +296,100 @@ app.post("/api/alerts/:id/notes", async (req, res) => {
         prisma.auditLog.create({
             data: {
                 alertId,
-                user: user || "Analyst",
+                actor: user || "Analyst",
                 action: "ADD_NOTE",
-                newState: "Note added",
+                details: "Note added",
             },
         }),
     ]);
 
     res.json({ success: true });
+});
+
+// --- Threat Intelligence API ---
+app.post("/api/threat-intel/check-ip", async (req, res) => {
+    try {
+        const { ip } = req.body;
+        if (!ip) {
+            return res.status(400).json({ error: "IP address is required" });
+        }
+        const result = await threatIntelService.checkIP(ip);
+        res.json(result);
+    } catch (error: any) {
+        console.error("Threat intel IP check error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post("/api/threat-intel/check-hash", async (req, res) => {
+    try {
+        const { hash } = req.body;
+        if (!hash) {
+            return res.status(400).json({ error: "File hash is required" });
+        }
+        const result = await threatIntelService.checkHash(hash);
+        res.json(result);
+    } catch (error: any) {
+        console.error("Threat intel hash check error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post("/api/threat-intel/check-domain", async (req, res) => {
+    try {
+        const { domain } = req.body;
+        if (!domain) {
+            return res.status(400).json({ error: "Domain is required" });
+        }
+        const result = await threatIntelService.checkDomain(domain);
+        res.json(result);
+    } catch (error: any) {
+        console.error("Threat intel domain check error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post("/api/threat-intel/check-url", async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) {
+            return res.status(400).json({ error: "URL is required" });
+        }
+        const result = await threatIntelService.checkURL(url);
+        res.json(result);
+    } catch (error: any) {
+        console.error("Threat intel URL check error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post("/api/threat-intel/extract-indicators", async (req, res) => {
+    try {
+        const { alertId } = req.body;
+        if (!alertId) {
+            return res.status(400).json({ error: "Alert ID is required" });
+        }
+
+        // Fetch alert with events
+        const alert = await prisma.alert.findUnique({
+            where: { id: alertId }
+        });
+
+        if (!alert) {
+            return res.status(404).json({ error: "Alert not found" });
+        }
+
+        const eventIds = JSON.parse(alert.matchedEventIds);
+        const events = await prisma.event.findMany({
+            where: { id: { in: eventIds } }
+        });
+
+        const indicators = threatIntelService.extractIndicators(events);
+        res.json(indicators);
+    } catch (error: any) {
+        console.error("Indicator extraction error:", error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.get("/api/stats", async (req, res) => {

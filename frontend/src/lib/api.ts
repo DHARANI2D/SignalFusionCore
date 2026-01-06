@@ -1,8 +1,9 @@
 export const getApiUrl = () => {
-    // 1. Server-side fetching (Inside Docker Network)
+    // 1. Server-side fetching (Inside Docker Network or Local Dev)
     if (typeof window === 'undefined') {
-        // Use the internal service name 'backend'
-        return "http://backend:8001";
+        // Check if we're in Docker (backend service exists) or local dev
+        // In local dev, use localhost; in Docker, use service name
+        return process.env.API_URL || "http://localhost:8001";
     }
 
     // 2. Client-side fetching (In Browser)

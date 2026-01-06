@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///Users/dharanidharansenthilkumar/Projects/SignalFusion%20Core/frontend/src/components/AutoRefresh.tsx"],"sourcesContent":["\"use client\";\n\nimport { useEffect } from \"react\";\nimport { useRouter } from \"next/navigation\";\n\nexport function AutoRefresh({ intervalMs = 5000 }: { intervalMs?: number }) {\n    const router = useRouter();\n\n    useEffect(() => {\n        const interval = setInterval(() => {\n            router.refresh();\n        }, intervalMs);\n\n        return () => clearInterval(interval);\n    }, [router, intervalMs]);\n\n    return null;\n}\n"],"names":[],"mappings":";;;;AAEA;AACA;;AAHA;;;AAKO,SAAS,YAAY,EAAE,aAAa,IAAI,EAA2B;;IACtE,MAAM,SAAS,IAAA,kJAAS;IAExB,IAAA,0KAAS;iCAAC;YACN,MAAM,WAAW;kDAAY;oBACzB,OAAO,OAAO;gBAClB;iDAAG;YAEH;yCAAO,IAAM,cAAc;;QAC/B;gCAAG;QAAC;QAAQ;KAAW;IAEvB,OAAO;AACX;GAZgB;;QACG,kJAAS;;;KADZ"}}]
-}

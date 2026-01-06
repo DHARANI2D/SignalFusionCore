@@ -88,4 +88,82 @@ router.get('/executions', async (req, res) => {
   }
 });
 
+// Get pending approvals
+router.get('/pending-approvals', async (req, res) => {
+  try {
+    const approvals = await prisma.playbookApproval.findMany({
+      where: { status: 'pending' },
+      include: {
+        playbook: true,
+        alert: true
+      },
+      orderBy: { requestedAt: 'desc' }
+    });
+    res.json({ count: approvals.length, approvals });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Approve playbook execution
+router.post('/approvals/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { approvedBy } = req.body;
+
+    const approval = await prisma.playbookApproval.findUnique({
+      where: { id },
+      include: { playbook: true, alert: true }
+    });
+
+    if (!approval) {
+      return res.status(404).json({ error: 'Approval request not found' });
+    }
+
+    if (approval.status !== 'pending') {
+      return res.status(400).json({ error: 'Approval already processed' });
+    }
+
+    // Update approval status
+    await prisma.playbookApproval.update({
+      where: { id },
+      data: {
+        status: 'approved',
+        approvedBy: approvedBy || 'system',
+        approvedAt: new Date()
+      }
+    });
+
+    // Execute the playbook
+    const { executePlaybook } = await import('../services/playbookEngine');
+    const execution = await executePlaybook(approval.playbookId, approval.alert, 'approved');
+
+    res.json({ success: true, approval, execution });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reject playbook execution
+router.post('/approvals/:id/reject', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rejectedBy, reason } = req.body;
+
+    const approval = await prisma.playbookApproval.update({
+      where: { id },
+      data: {
+        status: 'rejected',
+        approvedBy: rejectedBy || 'system',
+        approvedAt: new Date(),
+        reason: reason || 'Manually rejected'
+      }
+    });
+
+    res.json({ success: true, approval });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export const playbooksRouter = router;

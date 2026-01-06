@@ -188,3 +188,18 @@ async function executeAction(action: any, context: any) {
             throw new Error(`Unknown action type: ${action.actionType}`);
     }
 }
+
+// Create approval request for playbook execution
+export async function createApprovalRequest(playbookId: string, alertId: string) {
+    const approval = await prisma.playbookApproval.create({
+        data: {
+            playbookId,
+            alertId,
+            status: 'pending',
+            requestedAt: new Date()
+        }
+    });
+
+    console.log(`📋 Created approval request ${approval.id} for playbook ${playbookId}`);
+    return approval;
+}

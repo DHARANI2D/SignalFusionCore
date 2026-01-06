@@ -1,5 +1,6 @@
 import { prisma } from "../lib/db";
 import { UnifiedEvent, Detector, Detection } from "../types";
+import { evaluateTriggers, executePlaybook, createApprovalRequest } from "../services/playbookEngine";
 import { GeoVelocityDetector } from "./detectors/geoVelocity";
 import { FSMChainDetector } from "./detectors/fsmChain";
 import { AnomalousActionDetector } from "./detectors/anomalousAction";
@@ -94,7 +95,7 @@ export class DetectionEngine {
             const severity = this.calculateSeverity(detection.riskScore);
             const riskMessage = this.generateRiskMessage(detection);
 
-            await prisma.alert.create({
+            const alert = await prisma.alert.create({
                 data: {
                     summary: `${detection.detector}: ${detection.reasoning[0]}`,
                     severity,
@@ -131,6 +132,26 @@ export class DetectionEngine {
                     priority: severity === 'Critical' ? 'High' : severity === 'High' ? 'Medium' : 'Low'
                 }
             });
+
+            // Auto-execute matching playbooks
+            try {
+                const matchedPlaybooks = await evaluateTriggers(alert);
+
+                for (const playbook of matchedPlaybooks) {
+                    if (playbook.autoExecute && !playbook.requireApproval) {
+                        // Execute immediately
+                        await executePlaybook(playbook.id, alert, 'auto');
+                        console.log(`✅ Auto-executed playbook: ${playbook.name} for alert ${alert.id}`);
+                    } else if (playbook.requireApproval) {
+                        // Create approval request
+                        await createApprovalRequest(playbook.id, alert.id);
+                        console.log(`📋 Created approval request for playbook: ${playbook.name}`);
+                    }
+                }
+            } catch (error) {
+                console.error(`Error executing playbooks for alert ${alert.id}:`, error);
+                // Don't fail alert creation if playbook execution fails
+            }
         }
 
         return enrichedDetections;

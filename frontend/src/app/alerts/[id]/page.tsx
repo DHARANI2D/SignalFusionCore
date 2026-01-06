@@ -4,6 +4,8 @@ import { ChevronLeft, Info, Activity, ShieldAlert, History, MessageSquare, Shiel
 import Link from "next/link";
 import { StatusButtons, NoteForm } from "@/components/TriageControls";
 import { RemediationTerminal } from "@/components/RemediationTerminal";
+import { ThreatIntelActions } from "@/components/ThreatIntelActions";
+import { PlaybookExecutions } from "@/components/PlaybookExecutions";
 
 import { getApiUrl } from "@/lib/api";
 
@@ -14,8 +16,11 @@ export default async function AlertDetailPage({ params }: { params: Promise<{ id
     const alert = await res.json();
 
     // Safe JSON parsing with fallbacks
-    const safeJsonParse = <T,>(str: string | null | undefined, fallback: T): T => {
+    const safeJsonParse = <T,>(str: string | null | undefined | any, fallback: T): T => {
         if (!str) return fallback;
+        // If it's already an object/array, return it directly
+        if (typeof str === 'object') return str as T;
+        // Otherwise, try to parse it as a JSON string
         try {
             return JSON.parse(str);
         } catch (e) {
@@ -285,6 +290,16 @@ export default async function AlertDetailPage({ params }: { params: Promise<{ id
                             <h3 className="text-xs font-bold text-white/30 uppercase tracking-widest pl-2">Response Orchestration</h3>
                             <RemediationTerminal alertId={alert.id} actions={recommendedActions} />
                         </div>
+
+                        {/* Threat Intelligence */}
+                        <ThreatIntelActions alertId={alert.id} />
+
+                        {/* Playbook Executions */}
+                        <PlaybookExecutions
+                            alertId={alert.id}
+                            executions={alert.executions || []}
+                            approvals={alert.approvals || []}
+                        />
 
                         <div className="glass-panel p-6">
                             <h3 className="text-sm font-bold text-white/30 uppercase tracking-widest mb-4">Risk Profile</h3>
